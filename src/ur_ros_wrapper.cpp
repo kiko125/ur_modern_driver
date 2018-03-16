@@ -730,8 +730,12 @@ private:
 		ros::Publisher io_pub = nh_.advertise<ur_msgs::IOStates>(
 				"ur_driver/io_states", 1);
 
+        ros::Publisher emergency_pub = nh_.advertise<ur_msgs::IOStates>(
+                "ur_driver/emergency_states", 1);
+
 		while (ros::ok()) {
 			ur_msgs::IOStates io_msg;
+            ur_msgs::IOStates emergency_msg;
 			std::mutex msg_lock; // The values are locked for reading in the class, so just use a dummy mutex
 			std::unique_lock<std::mutex> locker(msg_lock);
 			while (!robot_.sec_interface_->robot_state_->getNewDataAvailable()) {
@@ -752,6 +756,16 @@ private:
 								& (1 << i)) >> i);
 				io_msg.digital_out_states.push_back(digi);
 			}
+
+            ur_msgs::Digital emergency_digi;
+            emergency_digi.pin = 0;
+            emergency_digi.state = robot_.sec_interface_->robot_state_->isEmergencyStopped();
+            emergency_msg.digital_in_states.push_back(emergency_digi);
+            emergency_digi.pin = 1;
+            emergency_digi.state = robot_.sec_interface_->robot_state_->isProtectiveStopped();
+            emergency_msg.digital_in_states.push_back(emergency_digi);
+            emergency_pub.publish(emergency_msg);
+
 			ur_msgs::Analog ana;
 			ana.pin = 0;
 			ana.state = robot_.sec_interface_->robot_state_->getAnalogInput0();
